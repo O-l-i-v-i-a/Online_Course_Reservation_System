@@ -7,14 +7,14 @@ import jakarta.persistence.*;
 public class Student {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "StudentID")
+    @Column(name = "`StudentId`")
     private Integer id;
 
     @OneToOne(optional = false, fetch = FetchType.EAGER)
-    @JoinColumn(name = "UserID", nullable = false)
+    @JoinColumn(name = "`UserId`", nullable = false)
     private AppUser user;
 
-    @Column(name = "Phone", length = 20)
+    @Column(name = "`Phone`", length = 20)
     private String phone;
 
     public Student() {}

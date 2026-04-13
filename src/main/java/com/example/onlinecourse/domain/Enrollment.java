@@ -12,25 +12,25 @@ import java.util.Set;
 public class Enrollment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ReservationID")
+    @Column(name = "`ReservationID`")
     private Integer id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "Status", nullable = false)
+    @Column(name = "`Status`", nullable = false)
     private ReservationStatus status;
 
-    @Column(name = "ReservationDate", nullable = false)
+    @Column(name = "`ReservationDate`", nullable = false)
     private LocalDate enrollmentDate;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "StudentID", nullable = false)
+    @JoinColumn(name = "`StudentID`", nullable = false)
     private Student student;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "RESERVATION_COURSE",
-            joinColumns = @JoinColumn(name = "ReservationID"),
-            inverseJoinColumns = @JoinColumn(name = "CourseID")
+            joinColumns = @JoinColumn(name = "`ReservationID`"),
+            inverseJoinColumns = @JoinColumn(name = "`CourseID`")
     )
     private Set<Course> courses = new LinkedHashSet<>();
 

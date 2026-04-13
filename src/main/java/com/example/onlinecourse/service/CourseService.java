@@ -43,7 +43,7 @@ public class CourseService {
 
     @Transactional(readOnly = true)
     public List<Course> findAvailable() {
-        return courseRepository.findBySeatsRemainingGreaterThan(0);
+        return courseRepository.findAvailableCourses();
     }
 
     @Transactional(readOnly = true)

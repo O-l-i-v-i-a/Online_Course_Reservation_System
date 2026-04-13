@@ -10,9 +10,14 @@ import com.example.onlinecourse.exception.BusinessException;
 import com.example.onlinecourse.exception.ResourceNotFoundException;
 import com.example.onlinecourse.repository.EnrollmentRepository;
 import com.example.onlinecourse.repository.StudentRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -24,13 +29,16 @@ public class EnrollmentService {
     private final CourseService courseService;
     private final StudentRepository studentRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public EnrollmentService(CourseService courseService,
                              StudentRepository studentRepository,
-                             EnrollmentRepository enrollmentRepository) {
+                             EnrollmentRepository enrollmentRepository,
+                             JdbcTemplate jdbcTemplate) {
         this.courseService = courseService;
         this.studentRepository = studentRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -77,12 +85,45 @@ public class EnrollmentService {
         }
         courseService.updateAvailableSeatsAfterReservation(course);
 
-        Enrollment enrollment = new Enrollment();
-        enrollment.setEnrollmentDate(LocalDate.now());
-        enrollment.setStatus(ReservationStatus.confirmed);
-        enrollment.setStudent(student);
-        enrollment.setCourses(Set.of(course));
-        return enrollmentRepository.save(enrollment);
+        LocalDate today = LocalDate.now();
+        String status = ReservationStatus.pending.name();
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(
+                """
+                INSERT INTO RESERVATION (`ReservationDate`, reservation_date, `Status`, `StudentID`, student_id)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                Statement.RETURN_GENERATED_KEYS
+            );
+            ps.setObject(1, today);
+            ps.setObject(2, today);
+            ps.setString(3, status);
+            ps.setInt(4, studentId);
+            ps.setInt(5, studentId);
+            return ps;
+        }, keyHolder);
+
+        Number key = keyHolder.getKey();
+        if (key == null) {
+            throw new BusinessException("Failed to create reservation");
+        }
+
+        int reservationId = key.intValue();
+        jdbcTemplate.update(
+            """
+            INSERT INTO RESERVATION_COURSE (`ReservationID`, reservation_id, `CourseID`, course_id)
+            VALUES (?, ?, ?, ?)
+            """,
+            reservationId,
+            reservationId,
+            courseId,
+            courseId
+        );
+
+        return enrollmentRepository.findById(reservationId)
+            .orElseThrow(() -> new BusinessException("Reservation created but could not be loaded"));
     }
 
     @Transactional

@@ -7,20 +7,20 @@ import jakarta.persistence.*;
 public class AppUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "UserID")
+    @Column(name = "`UserId`")
     private Integer id;
 
-    @Column(name = "Name", nullable = false, length = 100)
+    @Column(name = "`Name`", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "Email", nullable = false, unique = true, length = 150)
+    @Column(name = "`Email`", nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(name = "Password", nullable = false, length = 255)
+    @Column(name = "`Password`", nullable = false, length = 255)
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "Role", nullable = false)
+    @Column(name = "`Role`", nullable = false)
     private UserRole role;
 
     public AppUser() {

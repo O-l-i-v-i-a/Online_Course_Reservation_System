@@ -9,27 +9,27 @@ import java.math.BigDecimal;
 public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "CourseID")
+    @Column(name = "`CourseId`")
     private Integer id;
 
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
-    @JoinColumn(name = "InstructorID", nullable = false)
+    @JoinColumn(name = "`InstructorId`", nullable = false)
     private Instructor instructor;
 
-    @Column(name = "Title", nullable = false, length = 200)
+    @Column(name = "`Title`", nullable = false, length = 200)
     private String title;
 
-    @Column(name = "Description")
+    @Column(name = "`Description`")
     private String description;
 
-    @Column(name = "Price", nullable = false, precision = 10, scale = 2)
+    @Column(name = "`Price`", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "TotalSeats", nullable = false)
-    private int capacity;
+    @Column(name = "`TotalSeats`", nullable = false)
+    private int totalSeats;
 
-    @Column(name = "AvailableSeats", nullable = false)
-    private int seatsRemaining;
+    @Column(name = "`AvailableSeats`", nullable = false)
+    private int availableSeats;
 
     public Course() {}
 
@@ -39,8 +39,8 @@ public class Course {
         this.title = title;
         this.description = description;
         this.price = price;
-        this.capacity = capacity;
-        this.seatsRemaining = capacity;
+        this.totalSeats = capacity;
+        this.availableSeats = capacity;
     }
 
     public Integer getId() {
@@ -84,43 +84,59 @@ public class Course {
     }
 
     public int getCapacity() {
-        return capacity;
+        return totalSeats;
     }
 
     public void setCapacity(int capacity) {
-        this.capacity = capacity;
-        if (this.seatsRemaining > capacity) {
-            this.seatsRemaining = capacity;
+        this.totalSeats = capacity;
+        if (this.availableSeats > capacity) {
+            this.availableSeats = capacity;
         }
     }
 
     public int getSeatsRemaining() {
-        return seatsRemaining;
+        return availableSeats;
     }
 
     public void setSeatsRemaining(int seatsRemaining) {
-        this.seatsRemaining = seatsRemaining;
+        this.availableSeats = seatsRemaining;
+    }
+
+    public int getTotalSeats() {
+        return totalSeats;
+    }
+
+    public void setTotalSeats(int totalSeats) {
+        setCapacity(totalSeats);
+    }
+
+    public int getAvailableSeats() {
+        return availableSeats;
+    }
+
+    public void setAvailableSeats(int availableSeats) {
+        this.availableSeats = availableSeats;
     }
 
     public boolean takeSeat() {
-        if (seatsRemaining <= 0) {
+        if (availableSeats <= 0) {
             return false;
         }
-        seatsRemaining -= 1;
+        availableSeats -= 1;
         return true;
     }
 
     public void releaseSeat() {
-        if (seatsRemaining < capacity) {
-            seatsRemaining += 1;
+        if (availableSeats < totalSeats) {
+            availableSeats += 1;
         }
     }
 
     @PrePersist
     public void prePersist() {
         // Ensure seatsRemaining equals capacity when a new course is created
-        if (seatsRemaining == 0 && capacity > 0) {
-            seatsRemaining = capacity;
+        if (availableSeats == 0 && totalSeats > 0) {
+            availableSeats = totalSeats;
         }
     }
 }

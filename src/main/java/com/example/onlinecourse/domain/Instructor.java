@@ -7,14 +7,14 @@ import jakarta.persistence.*;
 public class Instructor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "InstructorID")
+    @Column(name = "`InstructorId`")
     private Integer id;
 
     @OneToOne(optional = false, fetch = FetchType.EAGER)
-    @JoinColumn(name = "UserID", nullable = false)
+    @JoinColumn(name = "`UserId`", nullable = false)
     private AppUser user;
 
-    @Column(name = "Specialization", length = 150)
+    @Column(name = "`Specialization`", length = 150)
     private String specialization;
 
     public Instructor() {

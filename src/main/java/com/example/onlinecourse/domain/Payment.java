@@ -10,21 +10,21 @@ import java.time.LocalDate;
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "PaymentID")
+    @Column(name = "`PaymentId`")
     private Integer id;
 
     @OneToOne(optional = false, fetch = FetchType.EAGER)
-    @JoinColumn(name = "ReservationID", nullable = false, unique = true)
+    @JoinColumn(name = "`ReservationId`", nullable = false, unique = true)
     private Enrollment reservation;
 
-    @Column(name = "Amount", nullable = false, precision = 10, scale = 2)
+    @Column(name = "`Amount`", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "PaymentDate", nullable = false)
+    @Column(name = "`PaymentDate`", nullable = false)
     private LocalDate paymentDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "PaymentType", nullable = false)
+    @Column(name = "`PaymentType`", nullable = false)
     private PaymentType paymentType;
 
     public Integer getId() {
