@@ -1,0 +1,53 @@
+INSERT INTO `USER` (Name, Email, Password, Role)
+SELECT 'Ada Lovelace', 'ada@student.com', '$2a$10$6MZQmnP6jX4JxYLf6Q7RGO6hsEixEblIYs5frQ4fyd8lI8v9V5gY.', 'student'
+WHERE NOT EXISTS (SELECT 1 FROM `USER` WHERE Email = 'ada@student.com');
+
+INSERT INTO `USER` (Name, Email, Password, Role)
+SELECT 'Alan Turing', 'alan@student.com', '$2a$10$6MZQmnP6jX4JxYLf6Q7RGO6hsEixEblIYs5frQ4fyd8lI8v9V5gY.', 'student'
+WHERE NOT EXISTS (SELECT 1 FROM `USER` WHERE Email = 'alan@student.com');
+
+INSERT INTO `USER` (Name, Email, Password, Role)
+SELECT 'Grace Hopper', 'grace@instructor.com', '$2a$10$6MZQmnP6jX4JxYLf6Q7RGO6hsEixEblIYs5frQ4fyd8lI8v9V5gY.', 'instructor'
+WHERE NOT EXISTS (SELECT 1 FROM `USER` WHERE Email = 'grace@instructor.com');
+
+INSERT INTO STUDENT (UserID, Phone)
+SELECT u.UserID, '111-222-3333'
+FROM `USER` u
+WHERE u.Email = 'ada@student.com'
+  AND NOT EXISTS (SELECT 1 FROM STUDENT s WHERE s.UserID = u.UserID);
+
+INSERT INTO STUDENT (UserID, Phone)
+SELECT u.UserID, '222-333-4444'
+FROM `USER` u
+WHERE u.Email = 'alan@student.com'
+  AND NOT EXISTS (SELECT 1 FROM STUDENT s WHERE s.UserID = u.UserID);
+
+INSERT INTO INSTRUCTOR (UserID, Specialization)
+SELECT u.UserID, 'Software Engineering'
+FROM `USER` u
+WHERE u.Email = 'grace@instructor.com'
+  AND NOT EXISTS (SELECT 1 FROM INSTRUCTOR i WHERE i.UserID = u.UserID);
+
+INSERT INTO COURSE (InstructorID, Title, Description, Price, TotalSeats, AvailableSeats)
+SELECT i.InstructorID,
+       'Spring Boot Basics',
+       'Intro to Spring Boot and REST APIs',
+       49.99,
+       30,
+       30
+FROM INSTRUCTOR i
+JOIN `USER` u ON u.UserID = i.UserID
+WHERE u.Email = 'grace@instructor.com'
+  AND NOT EXISTS (SELECT 1 FROM COURSE c WHERE c.Title = 'Spring Boot Basics');
+
+INSERT INTO COURSE (InstructorID, Title, Description, Price, TotalSeats, AvailableSeats)
+SELECT i.InstructorID,
+       'Database Design',
+       'Relational modeling and SQL essentials',
+       79.99,
+       25,
+       25
+FROM INSTRUCTOR i
+JOIN `USER` u ON u.UserID = i.UserID
+WHERE u.Email = 'grace@instructor.com'
+  AND NOT EXISTS (SELECT 1 FROM COURSE c WHERE c.Title = 'Database Design');

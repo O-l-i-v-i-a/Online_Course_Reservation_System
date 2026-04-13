@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Course Reservation System</title>
+    <link rel="stylesheet" href="/css/landing.css">
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="logo">
+            <span class="logo-icon">📚</span>
+            <span>CourseHub</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#courses-section">Courses</a></li>
+            <li><a href="/dashboard">Admin Dashboard</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <h1>Online Course Reservation System</h1>
+        <p>Discover, enroll, and manage your learning journey</p>
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-courses">0</div>
+                <div class="stat-label">Total Courses</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-students">0</div>
+                <div class="stat-label">Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-instructors">0</div>
+                <div class="stat-label">Instructors</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Available Courses Section -->
+<section class="courses-section" id="courses-section">
+    <div class="section-container">
+        <h2>Available Courses</h2>
+        <div id="alert-container"></div>
+        <div class="courses-grid" id="courses-grid">
+            <div class="loading">Loading courses...</div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>&copy; 2026 Online Course Reservation System. All rights reserved.</p>
+</footer>
+
+<script>
+    // Fetch stats on page load
+    async function loadStats() {
+        try {
+            const coursesRes = await fetch('/api/courses');
+            const courses = await coursesRes.json();
+            
+            const enrollmentsRes = await fetch('/api/enrollments/insights');
+            const enrollmentsData = await enrollmentsRes.json();
+            
+            document.getElementById('total-courses').textContent = courses.length;
+            document.getElementById('total-students').textContent = enrollmentsData.data.totalStudents || 0;
+            document.getElementById('total-instructors').textContent = enrollmentsData.data.totalInstructors || 0;
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+
+    // Fetch available courses
+    async function loadAvailableCourses() {
+        try {
+            const response = await fetch('/api/courses/available');
+            const courses = await response.json();
+            
+            const grid = document.getElementById('courses-grid');
+            grid.innerHTML = '';
+            
+            if (courses.length === 0) {
+                grid.innerHTML = '<div class="no-courses">No courses available at the moment.</div>';
+                return;
+            }
+
+            courses.forEach(course => {
+                const card = document.createElement('div');
+                card.className = 'course-card';
+                card.innerHTML = `
+                    <div class="course-header">
+                        <h3>${escapeHtml(course.title)}</h3>
+                        <span class="price-badge">$${course.price}</span>
+                    </div>
+                    <div class="course-body">
+                        <p class="instructor"><strong>Instructor:</strong> ${escapeHtml(course.instructor.user.name)}</p>
+                        <p class="description">${escapeHtml(course.description || 'No description available')}</p>
+                        <div class="seats-info">
+                            <span class="seats">${course.seatsRemaining} seats available</span>
+                            <span class="capacity">(${course.capacity} total)</span>
+                        </div>
+                    </div>
+                    <div class="course-footer">
+                        ${course.seatsRemaining > 0 
+                            ? `<button class="reserve-btn" onclick="openReservationForm(${course.id}, '${escapeHtml(course.title)}')">Reserve Now</button>` 
+                            : `<button class="reserve-btn disabled" disabled>No Seats Available</button>`
+                        }
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (error) {
+            console.error('Error loading courses:', error);
+            const grid = document.getElementById('courses-grid');
+            grid.innerHTML = '<div class="error">Failed to load courses. Please try again later.</div>';
+        }
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return (text || '').replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function openReservationForm(courseId, courseTitle) {
+        const form = prompt(`Enter your student ID to reserve "${courseTitle}":`);
+        if (form && form.trim()) {
+            reserveCourse(form, courseId);
+        }
+    }
+
+    async function reserveCourse(studentId, courseId) {
+        try {
+            const response = await fetch('/api/enrollments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Basic ' + btoa('student:password')
+                },
+                body: JSON.stringify({
+                    studentId: parseInt(studentId),
+                    courseId: parseInt(courseId)
+                })
+            });
+
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert('Reservation successful!', 'success');
+                loadAvailableCourses();
+            } else {
+                showAlert(result.message || 'Reservation failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            console.error('Error reserving course:', error);
+            showAlert('An error occurred while reserving the course.', 'error');
+        }
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alert-container');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.innerHTML = '';
+        container.appendChild(alert);
+        
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadStats();
+        loadAvailableCourses();
+        
+        // Refresh courses every 10 seconds
+        setInterval(loadAvailableCourses, 10000);
+    });
+</script>
+
+</body>
+</html>

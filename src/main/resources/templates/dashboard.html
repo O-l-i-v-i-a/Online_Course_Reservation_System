@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Reservation - Admin Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="bg-shape"></div>
+<main class="layout">
+    <section class="hero card">
+        <h1>Admin Dashboard - Course Management</h1>
+        <p>Manage courses, students, and reservations with real-time updates.</p>
+        <p class="flash ok" id="success-message" th:if="${message}" th:text="${message}"></p>
+        <p class="flash bad" id="error-message" th:if="${error}" th:text="${error}"></p>
+    </section>
+
+    <div id="alerts"></div>
+
+    <section class="grid">
+        <article class="card">
+            <h2>Create Course</h2>
+            <form id="create-course-form" method="post" action="/ui/courses" onsubmit="handleCreateCourse(event)">
+                <label>Instructor</label>
+                <select name="instructorId" id="instructor-select" required>
+                    <option value="">Select an instructor</option>
+                    <option th:each="instructor : ${instructors}"
+                            th:value="${instructor.id}"
+                            th:text="${instructor.user.name + ' (' + instructor.specialization + ')'}"></option>
+                </select>
+
+                <label>Title</label>
+                <input type="text" name="title" required>
+
+                <label>Description</label>
+                <textarea name="description" rows="3"></textarea>
+
+                <label>Total Seats</label>
+                <input type="number" min="1" name="totalSeats" required>
+
+                <label>Price</label>
+                <input type="number" min="0" step="0.01" name="price" required>
+
+                <button type="submit">Create Course</button>
+            </form>
+        </article>
+
+        <article class="card">
+            <h2>Create Reservation</h2>
+            <form id="create-reservation-form" method="post" action="/ui/enrollments" onsubmit="handleCreateReservation(event)">
+                <label>Student</label>
+                <select name="studentId" id="student-select" required>
+                    <option value="">Select a student</option>
+                    <option th:each="student : ${students}"
+                            th:value="${student.id}"
+                            th:text="${student.user.name + ' (' + student.user.email + ')'}"></option>
+                </select>
+
+                <label>Course</label>
+                <select name="courseId" id="course-select" required>
+                    <option value="">Select a course</option>
+                    <option th:each="course : ${courses}"
+                            th:if="${course.seatsRemaining > 0}"
+                            th:value="${course.id}"
+                            th:text="${course.title + ' - seats: ' + course.seatsRemaining}"></option>
+                </select>
+
+                <button type="submit">Reserve Seat</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="card">
+        <h2>Courses</h2>
+        <div class="table-actions">
+            <button class="btn-refresh" onclick="refreshCourses()">🔄 Refresh Courses</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Instructor</th>
+                    <th>Price</th>
+                    <th>Seats</th>
+                </tr>
+                </thead>
+                <tbody id="courses-tbody">
+                <tr th:each="course : ${courses}">
+                    <td th:text="${course.id}"></td>
+                    <td th:text="${course.title}"></td>
+                    <td th:text="${course.instructor.user.name}"></td>
+                    <td th:text="${course.price}"></td>
+                    <td th:text="${course.seatsRemaining + '/' + course.capacity}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Reservations</h2>
+        <div class="table-actions">
+            <button class="btn-refresh" onclick="refreshReservations()">🔄 Refresh Reservations</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Student</th>
+                    <th>Course(s)</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody id="reservations-tbody">
+                <tr th:each="reservation : ${reservations}">
+                    <td th:text="${reservation.id}"></td>
+                    <td th:text="${reservation.student.user.name}"></td>
+                    <td>
+                        <span th:each="course, iter : ${reservation.courses}"
+                              th:text="${iter.last ? course.title : course.title + ', '}"></span>
+                    </td>
+                    <td th:text="${reservation.status}"></td>
+                    <td th:text="${reservation.enrollmentDate}"></td>
+                    <td>
+                        <form th:if="${reservation.status.name() != 'cancelled'}"
+                              th:action="@{'/ui/enrollments/' + ${reservation.id} + '/cancel'}" method="post">
+                            <button class="danger" type="submit">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    // Handle create course form submission
+    async function handleCreateCourse(event) {
+        event.preventDefault();
+        const form = document.getElementById('create-course-form');
+        
+        try {
+            // For now, use traditional form submission but refresh courses list after
+            form.submit();
+            setTimeout(() => {
+                refreshCourses();
+                refreshSelectOptions();
+            }, 1000);
+        } catch (error) {
+            console.error('Error creating course:', error);
+            showAlert('Failed to create course', 'error');
+        }
+    }
+
+    // Handle create reservation form submission
+    async function handleCreateReservation(event) {
+        event.preventDefault();
+        const form = document.getElementById('create-reservation-form');
+        
+        try {
+            // For now, use traditional form submission but refresh data after
+            form.submit();
+            setTimeout(() => {
+                refreshCourses();
+                refreshReservations();
+                refreshSelectOptions();
+            }, 1000);
+        } catch (error) {
+            console.error('Error creating reservation:', error);
+            showAlert('Failed to create reservation', 'error');
+        }
+    }
+
+    // Refresh courses table dynamically
+    async function refreshCourses() {
+        try {
+            const response = await fetch('/api/courses');
+            const courses = await response.json();
+            
+            const tbody = document.getElementById('courses-tbody');
+            tbody.innerHTML = '';
+            
+            if (courses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No courses available</td></tr>';
+                return;
+            }
+
+            courses.forEach(course => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${course.id}</td>
+                    <td>${escapeHtml(course.title)}</td>
+                    <td>${escapeHtml(course.instructor.user.name)}</td>
+                    <td>$${course.price}</td>
+                    <td>${course.seatsRemaining}/${course.capacity}</td>
+                `;
+            });
+        } catch (error) {
+            console.error('Error refreshing courses:', error);
+            showAlert('Failed to refresh courses', 'error');
+        }
+    }
+
+    // Refresh reservations table dynamically
+    async function refreshReservations() {
+        try {
+            const response = await fetch('/api/enrollments');
+            const reservations = await response.json();
+            
+            const tbody = document.getElementById('reservations-tbody');
+            tbody.innerHTML = '';
+            
+            if (reservations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">No reservations available</td></tr>';
+                return;
+            }
+
+            reservations.forEach(reservation => {
+                const courseNames = reservation.courses.map(c => c.title).join(', ');
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${reservation.id}</td>
+                    <td>${escapeHtml(reservation.student.user.name)}</td>
+                    <td>${escapeHtml(courseNames)}</td>
+                    <td><span class="status-${reservation.status.toLowerCase()}">${reservation.status}</span></td>
+                    <td>${reservation.enrollmentDate}</td>
+                    <td>
+                        ${reservation.status !== 'CANCELLED' ? `<button class="danger" onclick="cancelReservation(${reservation.id})">Cancel</button>` : '-'}
+                    </td>
+                `;
+            });
+        } catch (error) {
+            console.error('Error refreshing reservations:', error);
+            showAlert('Failed to refresh reservations', 'error');
+        }
+    }
+
+    // Refresh course dropdown with only available courses
+    async function refreshSelectOptions() {
+        try {
+            const coursesResponse = await fetch('/api/courses');
+            const courses = await coursesResponse.json();
+            
+            const courseSelect = document.getElementById('course-select');
+            const existingSelected = courseSelect.value;
+            courseSelect.innerHTML = '<option value="">Select a course</option>';
+            
+            courses.forEach(course => {
+                if (course.seatsRemaining > 0) {
+                    const option = document.createElement('option');
+                    option.value = course.id;
+                    option.textContent = `${course.title} - seats: ${course.seatsRemaining}`;
+                    courseSelect.appendChild(option);
+                }
+            });
+            
+            if (existingSelected) {
+                courseSelect.value = existingSelected;
+            }
+        } catch (error) {
+            console.error('Error refreshing select options:', error);
+        }
+    }
+
+    // Cancel reservation
+    async function cancelReservation(reservationId) {
+        if (!confirm('Are you sure you want to cancel this reservation?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/ui/enrollments/${reservationId}/cancel`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                showAlert('Reservation cancelled successfully', 'success');
+                refreshReservations();
+                refreshCourses();
+                refreshSelectOptions();
+            } else {
+                showAlert('Failed to cancel reservation', 'error');
+            }
+        } catch (error) {
+            console.error('Error cancelling reservation:', error);
+            showAlert('An error occurred while cancelling', 'error');
+        }
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return (text || '').replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alerts');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `flash ${type === 'success' ? 'ok' : 'bad'}`;
+        alertDiv.textContent = message;
+        alertDiv.style.marginBottom = '1rem';
+        container.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Refresh UI every 30 seconds
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initial refresh of select options
+        refreshSelectOptions();
+        
+        // Set up auto-refresh
+        setInterval(() => {
+            refreshCourses();
+            refreshReservations();
+            refreshSelectOptions();
+        }, 30000);
+    });
+</script>
+
+</body>
+</html>

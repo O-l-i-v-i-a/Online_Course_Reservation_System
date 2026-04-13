@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard - Course Reservation</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<div class="dashboard-wrapper">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">📚 CourseHub - Instructor</div>
+            <div class="nav-right">
+                <span class="user-info" th:text="${instructor.user.name}">Instructor</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <ul class="nav-menu">
+            <li><a href="#section-courses" class="active" onclick="showSection('section-courses')">My Courses</a></li>
+            <li><a href="#section-create" onclick="showSection('section-create')">Create Course</a></li>
+            <li><a href="/logout" class="logout-link">Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="alerts"></div>
+
+        <!-- Create Course Section -->
+        <section class="section" id="section-create">
+            <h2>Create New Course</h2>
+            <div class="section-content">
+                <form id="create-course-form" class="form-card">
+                    <div class="form-group">
+                        <label>Course Title</label>
+                        <input type="text" name="title" required placeholder="Enter course title">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="4" placeholder="Enter course description"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Total Seats</label>
+                            <input type="number" min="1" name="totalSeats" required placeholder="Number of seats">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Price ($)</label>
+                            <input type="number" min="0" step="0.01" name="price" required placeholder="Course price">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Create Course</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- My Courses Section -->
+        <section class="section active" id="section-courses">
+            <h2>My Courses</h2>
+            <div class="section-content">
+                <div class="table-actions">
+                    <button class="btn-refresh" onclick="refreshCourses()">🔄 Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Price</th>
+                            <th>Seats</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="courses-tbody">
+                        <tr th:each="course : ${courses}">
+                            <td th:text="${course.id}"></td>
+                            <td th:text="${course.title}"></td>
+                            <td th:text="'$' + ${course.price}"></td>
+                            <td th:text="${course.seatsRemaining} + '/' + ${course.capacity}"></td>
+                            <td th:text="${course.description}"></td>
+                            <td>
+                                <button class="btn-small btn-danger" th:onclick="'deleteCourse(' + ${course.id} + ')'">Delete</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    function showSection(sectionId) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
+        
+        document.getElementById(sectionId).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    document.getElementById('create-course-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = {
+            instructorId: [[${instructorId}]],
+            title: formData.get('title'),
+            description: formData.get('description'),
+            totalSeats: parseInt(formData.get('totalSeats')),
+            price: parseFloat(formData.get('price'))
+        };
+
+        try {
+            const response = await fetch('/api/courses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                showAlert('Course created successfully!', 'success');
+                e.target.reset();
+                setTimeout(() => refreshCourses(), 1000);
+            } else {
+                showAlert('Failed to create course', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('An error occurred', 'error');
+        }
+    });
+
+    async function refreshCourses() {
+        // Shows courses for this instructor from the data attribute
+        showAlert('Courses page refreshed', 'success');
+        
+        try {
+            const response = await fetch('/instructor/dashboard');
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (error) {
+            showAlert('Failed to refresh', 'error');
+        }
+    }
+
+    async function deleteCourse(courseId) {
+        if (!confirm('Are you sure you want to delete this course?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/courses/${courseId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showAlert('Course deleted successfully', 'success');
+                setTimeout(() => refreshCourses(), 1000);
+            } else {
+                showAlert('Failed to delete course', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('An error occurred', 'error');
+        }
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alerts');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        
+        setTimeout(() => alert.remove(), 5000);
+    }
+</script>
+
+</body>
+</html>

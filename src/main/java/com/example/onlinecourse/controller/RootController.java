@@ -8,7 +8,7 @@ import java.util.Map;
 @RestController
 public class RootController {
 
-    @GetMapping({"/", ""})
+    @GetMapping("/api")
     public Map<String, String> hello() {
         return Map.of(
                 "message", "Online Course Reservation API",

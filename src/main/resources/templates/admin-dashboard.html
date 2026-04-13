@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Course Reservation</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<div class="dashboard-wrapper">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">📚 CourseHub - Admin</div>
+            <div class="nav-right">
+                <span class="user-info">Admin Panel</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <ul class="nav-menu">
+            <li><a href="#section-create-user" class="active" onclick="showSection('section-create-user')">Create User</a></li>
+            <li><a href="#section-stats" onclick="showSection('section-stats')">Dashboard</a></li>
+            <li><a href="#section-users" onclick="showSection('section-users')">Users</a></li>
+            <li><a href="#section-courses" onclick="showSection('section-courses')">Courses</a></li>
+            <li><a href="#section-reservations" onclick="showSection('section-reservations')">Reservations</a></li>
+            <li><a href="/logout" class="logout-link">Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="alerts"></div>
+
+        <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+
+        <section class="section active" id="section-create-user">
+            <h1>Create User</h1>
+            <div class="section-content">
+                <form class="form-card" th:action="@{/admin/users}" method="post" id="createUserForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" required placeholder="Full name">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required placeholder="name@example.com">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" required placeholder="Temporary password">
+                        </div>
+                        <div class="form-group">
+                            <label for="role">Role</label>
+                            <select id="role" name="role" required onchange="toggleRoleFields()">
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="INSTRUCTOR">INSTRUCTOR</option>
+                                <option value="STUDENT">STUDENT</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" id="instructorFields">
+                        <label for="specialization">Specialization</label>
+                        <input type="text" id="specialization" name="specialization" placeholder="General / Subject area">
+                    </div>
+                    <div class="form-group" id="studentFields">
+                        <label for="studentPhone">Phone</label>
+                        <input type="text" id="studentPhone" name="phone" placeholder="Required for students">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn-primary">Create User</button>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        ADMIN users do not require profile records. INSTRUCTOR and STUDENT profiles are created automatically.
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Dashboard Stats Section -->
+        <section class="section" id="section-stats">
+            <h1>Admin Dashboard</h1>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value" th:text="${users.size()}">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Courses</div>
+                        <div class="stat-value" th:text="${courses.size()}">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Reservations</div>
+                        <div class="stat-value" th:text="${reservations.size()}">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👨‍🎓</div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-value" th:text="${students.size()}">0</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Section -->
+        <section class="section" id="section-users">
+            <h2>Users Management</h2>
+            <div class="section-content">
+                <div class="table-actions">
+                    <button class="btn-refresh" onclick="refreshUsers()">🔄 Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                        </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                        <tr th:each="user : ${users}">
+                            <td th:text="${user.id}"></td>
+                            <td th:text="${user.name}"></td>
+                            <td th:text="${user.email}"></td>
+                            <td><span class="role-badge" th:class="'role-' + ${user.role.toString().toLowerCase()}" th:text="${user.role}"></span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Courses Section -->
+        <section class="section" id="section-courses">
+            <h2>Course Management</h2>
+            <div class="section-content">
+                <div class="table-actions">
+                    <button class="btn-refresh" onclick="refreshCourses()">🔄 Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Instructor</th>
+                            <th>Price</th>
+                            <th>Seats</th>
+                        </tr>
+                        </thead>
+                        <tbody id="courses-tbody">
+                        <tr th:each="course : ${courses}">
+                            <td th:text="${course.id}"></td>
+                            <td th:text="${course.title}"></td>
+                            <td th:text="${course.instructor.user.name}"></td>
+                            <td th:text="'$' + ${course.price}"></td>
+                            <td th:text="${course.seatsRemaining} + '/' + ${course.capacity}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reservations Section -->
+        <section class="section" id="section-reservations">
+            <h2>Reservations Management</h2>
+            <div class="section-content">
+                <div class="table-actions">
+                    <button class="btn-refresh" onclick="refreshReservations()">🔄 Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Student</th>
+                            <th>Course(s)</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                        </thead>
+                        <tbody id="reservations-tbody">
+                        <tr th:each="res : ${reservations}">
+                            <td th:text="${res.id}"></td>
+                            <td th:text="${res.student.user.name}"></td>
+                            <td>
+                                <span th:each="course, iter : ${res.courses}"
+                                      th:text="${iter.last ? course.title : course.title + ', '}"></span>
+                            </td>
+                            <td><span class="status-badge" th:class="'status-' + ${res.status.toString().toLowerCase()}" th:text="${res.status}"></span></td>
+                            <td th:text="${res.enrollmentDate}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    function showSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
+        
+        // Show selected section
+        document.getElementById(sectionId).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    async function refreshUsers() {
+        location.reload();
+    }
+
+    async function refreshCourses() {
+        try {
+            const response = await fetch('/api/courses');
+            const courses = await response.json();
+            
+            const tbody = document.getElementById('courses-tbody');
+            tbody.innerHTML = '';
+            
+            courses.forEach(course => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${course.id}</td>
+                    <td>${escapeHtml(course.title)}</td>
+                    <td>${escapeHtml(course.instructor.user.name)}</td>
+                    <td>$${course.price}</td>
+                    <td>${course.seatsRemaining}/${course.capacity}</td>
+                `;
+            });
+            
+            showAlert('Courses refreshed successfully', 'success');
+        } catch (error) {
+            console.error('Error refreshing courses:', error);
+            showAlert('Failed to refresh courses', 'error');
+        }
+    }
+
+    async function refreshReservations() {
+        try {
+            const response = await fetch('/api/enrollments');
+            const reservations = await response.json();
+            
+            const tbody = document.getElementById('reservations-tbody');
+            tbody.innerHTML = '';
+            
+            reservations.forEach(res => {
+                const courseNames = res.courses.map(c => c.title).join(', ');
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${res.id}</td>
+                    <td>${escapeHtml(res.student.user.name)}</td>
+                    <td>${escapeHtml(courseNames)}</td>
+                    <td><span class="status-badge status-${res.status.toLowerCase()}">${res.status}</span></td>
+                    <td>${res.enrollmentDate}</td>
+                `;
+            });
+            
+            showAlert('Reservations refreshed successfully', 'success');
+        } catch (error) {
+            console.error('Error refreshing reservations:', error);
+            showAlert('Failed to refresh reservations', 'error');
+        }
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return (text || '').replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alerts');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        
+        setTimeout(() => alert.remove(), 5000);
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        refreshCourses();
+        refreshReservations();
+    }, 30000);
+
+    function toggleRoleFields() {
+        const role = document.getElementById('role').value;
+        const instructorFields = document.getElementById('instructorFields');
+        const studentFields = document.getElementById('studentFields');
+        const studentPhone = document.getElementById('studentPhone');
+        const specialization = document.getElementById('specialization');
+
+        instructorFields.style.display = role === 'INSTRUCTOR' ? 'grid' : 'none';
+        studentFields.style.display = role === 'STUDENT' ? 'block' : 'none';
+        studentPhone.disabled = role !== 'STUDENT';
+        specialization.disabled = role !== 'INSTRUCTOR';
+    }
+
+    toggleRoleFields();
+</script>
+
+</body>
+</html>

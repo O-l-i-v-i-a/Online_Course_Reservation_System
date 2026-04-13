@@ -3,26 +3,27 @@ package com.example.onlinecourse.domain;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "STUDENT")
-public class Student {
+@Table(name = "INSTRUCTOR")
+public class Instructor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "StudentID")
+    @Column(name = "InstructorID")
     private Integer id;
 
     @OneToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "UserID", nullable = false)
     private AppUser user;
 
-    @Column(name = "Phone", length = 20)
-    private String phone;
+    @Column(name = "Specialization", length = 150)
+    private String specialization;
 
-    public Student() {}
+    public Instructor() {
+    }
 
-    public Student(Integer id, AppUser user, String phone) {
+    public Instructor(Integer id, AppUser user, String specialization) {
         this.id = id;
         this.user = user;
-        this.phone = phone;
+        this.specialization = specialization;
     }
 
     public Integer getId() {
@@ -41,11 +42,11 @@ public class Student {
         this.user = user;
     }
 
-    public String getPhone() {
-        return phone;
+    public String getSpecialization() {
+        return specialization;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setSpecialization(String specialization) {
+        this.specialization = specialization;
     }
 }

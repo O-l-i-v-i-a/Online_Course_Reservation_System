@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Reservation</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="bg-shape"></div>
+<main class="layout">
+    <section class="hero card">
+        <h1>Online Course Reservations</h1>
+        <p>Connected to MySQL with live courses, students, and reservations.</p>
+        <p class="flash ok" th:if="${message}" th:text="${message}"></p>
+        <p class="flash bad" th:if="${error}" th:text="${error}"></p>
+    </section>
+
+    <section class="grid">
+        <article class="card">
+            <h2>Create Course</h2>
+            <form method="post" action="/ui/courses">
+                <label>Instructor</label>
+                <select name="instructorId" required>
+                    <option th:each="instructor : ${instructors}"
+                            th:value="${instructor.id}"
+                            th:text="${instructor.user.name + ' (' + instructor.specialization + ')'}"></option>
+                </select>
+
+                <label>Title</label>
+                <input type="text" name="title" required>
+
+                <label>Description</label>
+                <textarea name="description" rows="3"></textarea>
+
+                <label>Total Seats</label>
+                <input type="number" min="1" name="totalSeats" required>
+
+                <label>Price</label>
+                <input type="number" min="0" step="0.01" name="price" required>
+
+                <button type="submit">Create Course</button>
+            </form>
+        </article>
+
+        <article class="card">
+            <h2>Create Reservation</h2>
+            <form method="post" action="/ui/enrollments">
+                <label>Student</label>
+                <select name="studentId" required>
+                    <option th:each="student : ${students}"
+                            th:value="${student.id}"
+                            th:text="${student.user.name + ' (' + student.user.email + ')'}"></option>
+                </select>
+
+                <label>Course</label>
+                <select name="courseId" required>
+                    <option th:each="course : ${courses}"
+                            th:value="${course.id}"
+                            th:text="${course.title + ' - seats: ' + course.seatsRemaining}"></option>
+                </select>
+
+                <button type="submit">Reserve Seat</button>
+            </form>
+        </article>
+    </section>
+
+    <section class="card">
+        <h2>Courses</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Instructor</th>
+                    <th>Price</th>
+                    <th>Seats</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="course : ${courses}">
+                    <td th:text="${course.id}"></td>
+                    <td th:text="${course.title}"></td>
+                    <td th:text="${course.instructor.user.name}"></td>
+                    <td th:text="${course.price}"></td>
+                    <td th:text="${course.seatsRemaining + '/' + course.capacity}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Reservations</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Student</th>
+                    <th>Course(s)</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="reservation : ${reservations}">
+                    <td th:text="${reservation.id}"></td>
+                    <td th:text="${reservation.student.user.name}"></td>
+                    <td>
+                        <span th:each="course, iter : ${reservation.courses}"
+                              th:text="${iter.last ? course.title : course.title + ', '}"></span>
+                    </td>
+                    <td th:text="${reservation.status}"></td>
+                    <td th:text="${reservation.enrollmentDate}"></td>
+                    <td>
+                        <form th:if="${reservation.status.name() != 'cancelled'}"
+                              th:action="@{'/ui/enrollments/' + ${reservation.id} + '/cancel'}" method="post">
+                            <button class="danger" type="submit">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>
