@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Course Reservation</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+<div class="dashboard-wrapper">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">📚 CourseHub - Student</div>
+            <div class="nav-right">
+                <span class="user-info" th:text="${student.user.name}">Student</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <ul class="nav-menu">
+            <li><a href="#section-avail" class="active" onclick="showSection('section-avail')">Available Courses</a></li>
+            <li><a href="#section-enrolled" onclick="showSection('section-enrolled')">My Reservations</a></li>
+            <li><a href="/logout" class="logout-link">Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="alerts"></div>
+
+        <!-- Available Courses Section -->
+        <section class="section active" id="section-avail">
+            <h2>Available Courses</h2>
+            <div class="section-content">
+                <div class="table-actions">
+                    <button class="btn-refresh" onclick="refreshAvailableCourses()">🔄 Refresh</button>
+                </div>
+                <div class="courses-grid" id="courses-grid">
+                    <div class="loading">Loading courses...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- My Reservations Section -->
+        <section class="section" id="section-enrolled">
+            <h2>My Reservations</h2>
+            <div class="section-content">
+                <div class="table-actions">
+                    <button class="btn-refresh" onclick="refreshReservations()">🔄 Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Course(s)</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody id="reservations-tbody">
+                        <tr th:each="res : ${reservations}">
+                            <td th:text="${res.id}"></td>
+                            <td>
+                                <span th:each="course, iter : ${res.courses}"
+                                      th:text="${iter.last ? course.title : course.title + ', '}"></span>
+                            </td>
+                            <td><span class="status-badge" th:class="'status-' + ${res.status.toString().toLowerCase()}" th:text="${res.status}"></span></td>
+                            <td th:text="${res.enrollmentDate}"></td>
+                            <td>
+                                <button th:if="${res.status.name() != 'cancelled'}" 
+                                        class="btn-small btn-danger" 
+                                        th:onclick="'cancelReservation(' + ${res.id} + ')'">Cancel</button>
+                                <span th:if="${res.status.name() == 'cancelled'}" style="color: #999;">Cancelled</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const fallbackStudentId = /*[[${studentId}]]*/ null;
+    let currentStudentId = fallbackStudentId;
+
+    function showSection(sectionId) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
+
+        document.getElementById(sectionId).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    async function ensureStudentId() {
+        if (currentStudentId) {
+            return currentStudentId;
+        }
+
+        try {
+            const response = await fetch('/api/students/me');
+            if (!response.ok) {
+                throw new Error('Unable to load student profile');
+            }
+            const student = await response.json();
+            currentStudentId = student.id;
+            return currentStudentId;
+        } catch (error) {
+            showAlert('Unable to resolve student profile. Please login again.', 'error');
+            throw error;
+        }
+    }
+
+    function setLoadingCourses() {
+        const grid = document.getElementById('courses-grid');
+        grid.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading available courses...</p>
+            </div>
+        `;
+    }
+
+    function setLoadingReservations() {
+        const tbody = document.getElementById('reservations-tbody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="loading-cell">
+                    <div class="spinner"></div>
+                    <p>Loading reservations...</p>
+                </td>
+            </tr>
+        `;
+    }
+
+    function courseCard(course) {
+        const seats = Number(course.seatsRemaining || 0);
+        const lowSeatsClass = seats < 5 ? 'seats-badge seats-low' : 'seats-badge';
+        const reserveDisabled = seats === 0;
+        const reserveLabel = reserveDisabled ? 'Full' : 'Reserve / Join';
+        const reserveClass = reserveDisabled ? 'btn-primary btn-disabled' : 'btn-primary';
+
+        return `
+            <div class="course-card">
+                <div class="card-header">
+                    <h3>${escapeHtml(course.title)}</h3>
+                    <span class="price">$${course.price ?? 0}</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Instructor:</strong> ${escapeHtml(course.instructor?.user?.name || 'TBA')}</p>
+                    <p class="description">${escapeHtml(course.description || 'No description available')}</p>
+                    <div class="${lowSeatsClass}">${seats} seat(s) available</div>
+                </div>
+                <div class="card-footer">
+                    <button class="${reserveClass}" ${reserveDisabled ? 'disabled' : ''}
+                        onclick="reserveCourse(${course.id}, '${escapeHtml(course.title)}')">
+                        ${reserveLabel}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function refreshAvailableCourses() {
+        setLoadingCourses();
+
+        try {
+            const response = await fetch('/api/courses/available');
+            if (!response.ok) {
+                throw new Error('Failed to fetch available courses');
+            }
+
+            const courses = await response.json();
+
+            const grid = document.getElementById('courses-grid');
+            grid.innerHTML = '';
+
+            if (courses.length === 0) {
+                grid.innerHTML = '<div class="no-courses">No courses available right now.</div>';
+                return;
+            }
+
+            courses.forEach(course => {
+                const card = document.createElement('div');
+                card.innerHTML = courseCard(course);
+                grid.appendChild(card);
+            });
+        } catch (error) {
+            console.error('refreshAvailableCourses error:', error);
+            document.getElementById('courses-grid').innerHTML =
+                '<div class="no-courses">Failed to load courses. Please try again.</div>';
+            showAlert('Failed to load courses', 'error');
+        }
+    }
+
+    async function reserveCourse(courseId, courseTitle) {
+        let studentId;
+
+        try {
+            studentId = await ensureStudentId();
+
+            const response = await fetch('/api/enrollments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    studentId,
+                    courseId: courseId
+                })
+            });
+
+            if (response.ok) {
+                const body = await response.json();
+                const msg = body?.message || `Successfully enrolled in ${courseTitle}`;
+                showAlert(msg, 'success');
+                await Promise.all([refreshAvailableCourses(), refreshReservations()]);
+            } else {
+                const message = await parseErrorMessage(response, 'Unable to reserve this course');
+                showAlert(message, 'error');
+            }
+        } catch (error) {
+            console.error('reserveCourse error:', error);
+            showAlert('Unable to complete enrollment at the moment', 'error');
+        }
+    }
+
+    async function cancelReservation(reservationId) {
+        if (!confirm('Are you sure you want to cancel this reservation?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/enrollments/${reservationId}/drop`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                const body = await response.json();
+                showAlert(body?.message || 'Reservation cancelled successfully', 'success');
+                await Promise.all([refreshReservations(), refreshAvailableCourses()]);
+            } else {
+                const message = await parseErrorMessage(response, 'Failed to cancel reservation');
+                showAlert(message, 'error');
+            }
+        } catch (error) {
+            console.error('cancelReservation error:', error);
+            showAlert('Unable to cancel reservation right now', 'error');
+        }
+    }
+
+    function payReservation(reservationId) {
+        showAlert(`Payment for reservation #${reservationId} is not implemented yet.`, 'error');
+    }
+
+    async function refreshReservations() {
+        setLoadingReservations();
+
+        try {
+            const studentId = await ensureStudentId();
+            const response = await fetch(`/api/enrollments/student/${studentId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservations');
+            }
+
+            const reservations = await response.json();
+
+            const tbody = document.getElementById('reservations-tbody');
+            tbody.innerHTML = '';
+
+            if (reservations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">You have no reservations yet.</td></tr>';
+                return;
+            }
+
+            reservations.forEach(res => {
+                const courseNames = res.courses.map(c => c.title).join(', ');
+                const status = (res.status || '').toUpperCase();
+                const canCancel = status === 'PENDING' || status === 'CONFIRMED';
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${res.id}</td>
+                    <td>${escapeHtml(courseNames)}</td>
+                    <td><span class="status-badge status-${res.status.toLowerCase()}">${res.status}</span></td>
+                    <td>${res.enrollmentDate}</td>
+                    <td>
+                        ${canCancel ? `<button class="btn-small btn-danger" onclick="cancelReservation(${res.id})">Cancel</button>` : '<span style="color: #999; margin-right: 0.75rem;">Cancelled</span>'}
+                        ${status !== 'CANCELLED' ? `<button class="btn-small btn-refresh" onclick="payReservation(${res.id})">Pay</button>` : ''}
+                    </td>
+                `;
+            });
+        } catch (error) {
+            console.error('refreshReservations error:', error);
+            document.getElementById('reservations-tbody').innerHTML =
+                '<tr><td colspan="5" class="loading-cell">Failed to load reservations.</td></tr>';
+            showAlert('Failed to load reservations', 'error');
+        }
+    }
+
+    async function parseErrorMessage(response, fallback) {
+        try {
+            const data = await response.json();
+            return data?.message || data?.error || fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return (text || '').replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alerts');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        
+        setTimeout(() => alert.remove(), 5000);
+    }
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshAvailableCourses();
+        refreshReservations();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            refreshAvailableCourses();
+            refreshReservations();
+        }, 30000);
+    });
+</script>
+
+</body>
+</html>

@@ -9,6 +9,7 @@ import java.util.Map;
 @Controller
 public class RootController {
 
+<<<<<<< HEAD
     @GetMapping({"/", ""})
     public String home() {
         return "forward:/index.html";
@@ -16,6 +17,9 @@ public class RootController {
 
     @GetMapping("/api")
     @ResponseBody
+=======
+    @GetMapping("/api")
+>>>>>>> e14d25e7ba7ff31cf2bc25002783a738809ecd33
     public Map<String, String> hello() {
         return Map.of(
                 "message", "Online Course Reservation API",
