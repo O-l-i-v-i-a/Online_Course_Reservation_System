@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation Control Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-orb orb-left" aria-hidden="true"></div>
+<div class="bg-orb orb-right" aria-hidden="true"></div>
+
+<main class="shell">
+    <header class="hero reveal">
+        <div class="hero-line">
+            <p class="eyebrow">ONLINE COURSE RESERVATION</p>
+            <div class="preset-row">
+                <button id="quickStudent" class="btn btn-soft btn-small" type="button">Student Preset</button>
+                <button id="quickInstructor" class="btn btn-soft btn-small" type="button">Instructor Preset</button>
+                <button id="quickAdmin" class="btn btn-soft btn-small" type="button">Admin Preset</button>
+            </div>
+        </div>
+        <h1>Reservation Control Center</h1>
+        <p class="hero-copy">
+            Operate the complete reservation flow from one dashboard: discovery, enrollment, course management,
+            and platform insights.
+        </p>
+        <div class="stat-strip">
+            <article class="stat-card">
+                <span>Total Courses</span>
+                <strong id="totalCoursesValue">0</strong>
+            </article>
+            <article class="stat-card">
+                <span>Available Seats</span>
+                <strong id="availableSeatsValue">0</strong>
+            </article>
+            <article class="stat-card">
+                <span>Active Enrollments</span>
+                <strong id="activeEnrollmentValue">0</strong>
+            </article>
+            <article class="stat-card">
+                <span>Fully Booked</span>
+                <strong id="fullCoursesValue">0</strong>
+            </article>
+        </div>
+    </header>
+
+    <section class="panel reveal" style="--reveal-delay: 80ms">
+        <div class="panel-title-wrap">
+            <h2>Authentication And Session</h2>
+            <p>Demo users: student/password, instructor/teach, admin/admin.</p>
+        </div>
+        <div class="auth-grid">
+            <label>
+                Username
+                <input id="username" type="text" value="student" autocomplete="username">
+            </label>
+            <label>
+                Password
+                <input id="password" type="password" value="password" autocomplete="current-password">
+            </label>
+            <label>
+                Student ID
+                <input id="studentId" type="number" min="1" value="1">
+            </label>
+            <label>
+                Selected Course ID
+                <input id="courseId" type="number" min="1" placeholder="Pick from Discover panel">
+            </label>
+            <label>
+                Enrollment ID
+                <input id="enrollmentId" type="number" min="1" placeholder="Needed for drop actions">
+            </label>
+        </div>
+        <div class="action-row">
+            <button id="saveSessionBtn" class="btn btn-primary" type="button">Save Session</button>
+            <button id="refreshDashboardBtn" class="btn" type="button">Refresh Dashboard</button>
+            <button id="clearLogBtn" class="btn btn-ghost" type="button">Clear Activity</button>
+        </div>
+        <div id="sessionBadge" class="session-badge">Session: guest</div>
+        <div id="statusBanner" class="status-banner info">Ready.</div>
+    </section>
+
+    <section class="panel tab-shell reveal" style="--reveal-delay: 160ms">
+        <nav class="tab-nav" aria-label="Dashboard sections">
+            <button class="tab-btn active" data-tab-target="discover" type="button">Discover</button>
+            <button class="tab-btn" data-tab-target="student" type="button">Student Desk</button>
+            <button class="tab-btn" data-tab-target="studio" type="button">Course Studio</button>
+            <button class="tab-btn" data-tab-target="admin" type="button">Admin Hub</button>
+        </nav>
+    </section>
+
+    <section class="panel tab-panel active reveal" data-tab-panel="discover" style="--reveal-delay: 240ms">
+        <div class="panel-title-wrap">
+            <h2>Discover Courses</h2>
+            <p>Search and filter the course catalog, then send a selection to Student Desk.</p>
+        </div>
+        <div class="discover-controls">
+            <label class="control-stack">
+                Search by title
+                <input id="searchKeyword" type="text" placeholder="Example: Spring Boot">
+            </label>
+            <label class="toggle-wrap" for="availableOnlyToggle">
+                <input id="availableOnlyToggle" type="checkbox">
+                <span>Only show courses with seats available</span>
+            </label>
+            <div class="action-row compact">
+                <button id="searchCoursesBtn" class="btn btn-primary" type="button">Search</button>
+                <button id="resetSearchBtn" class="btn" type="button">Reset</button>
+            </div>
+        </div>
+        <div id="courseGrid" class="course-grid"></div>
+    </section>
+
+    <section class="panel tab-panel reveal" data-tab-panel="student" style="--reveal-delay: 320ms">
+        <div class="panel-title-wrap">
+            <h2>Student Desk</h2>
+            <p>Enroll in courses, view enrollment history, and drop active enrollments.</p>
+        </div>
+        <div class="action-row">
+            <button id="enrollBtn" class="btn btn-primary" type="button">Enroll In Selected Course</button>
+            <button id="loadStudentEnrollmentsBtn" class="btn" type="button">Load My Enrollments</button>
+            <button id="dropBtn" class="btn btn-danger" type="button">Drop Enrollment</button>
+        </div>
+        <div id="studentEnrollmentGrid" class="enrollment-grid"></div>
+    </section>
+
+    <section class="panel tab-panel reveal" data-tab-panel="studio" style="--reveal-delay: 400ms">
+        <div class="panel-title-wrap">
+            <h2>Course Studio</h2>
+            <p>Instructor and admin tools for creating, editing, deleting courses, and monitoring enrollments.</p>
+        </div>
+
+        <div class="split-layout">
+            <article class="subpanel">
+                <h3>Create Course</h3>
+                <label>
+                    Title
+                    <input id="createTitle" type="text" placeholder="New course title">
+                </label>
+                <label>
+                    Description
+                    <textarea id="createDescription" rows="3" placeholder="Short description"></textarea>
+                </label>
+                <label>
+                    Capacity
+                    <input id="createCapacity" type="number" min="1" value="20">
+                </label>
+                <button id="createCourseBtn" class="btn btn-primary" type="button">Create Course</button>
+            </article>
+
+            <article class="subpanel">
+                <h3>Update Course</h3>
+                <label>
+                    Course ID
+                    <input id="updateCourseId" type="number" min="1" placeholder="Course ID to update">
+                </label>
+                <label>
+                    New Title
+                    <input id="updateTitle" type="text" placeholder="Updated title">
+                </label>
+                <label>
+                    New Description
+                    <textarea id="updateDescription" rows="3" placeholder="Updated description"></textarea>
+                </label>
+                <label>
+                    New Capacity
+                    <input id="updateCapacity" type="number" min="1" value="25">
+                </label>
+                <button id="updateCourseBtn" class="btn" type="button">Update Course</button>
+            </article>
+        </div>
+
+        <article class="subpanel">
+            <h3>Delete Course</h3>
+            <div class="inline-fields">
+                <label>
+                    Course ID
+                    <input id="deleteCourseId" type="number" min="1" placeholder="Course ID to delete">
+                </label>
+                <button id="deleteCourseBtn" class="btn btn-danger" type="button">Delete Course</button>
+            </div>
+        </article>
+
+        <article class="subpanel">
+            <div class="subpanel-head">
+                <h3>Enrollment Monitor</h3>
+                <button id="loadAllEnrollmentsBtn" class="btn" type="button">Load All Enrollments</button>
+            </div>
+            <div id="allEnrollmentsTable" class="table-host"></div>
+        </article>
+    </section>
+
+    <section class="panel tab-panel reveal" data-tab-panel="admin" style="--reveal-delay: 480ms">
+        <div class="panel-title-wrap">
+            <h2>Admin Hub</h2>
+            <p>Review platform-level analytics and enrollment trends.</p>
+        </div>
+        <div class="action-row">
+            <button id="loadInsightsBtn" class="btn btn-primary" type="button">Load Insights</button>
+        </div>
+        <div class="insight-grid">
+            <article class="insight-card"><span>Total Students</span><strong id="insightStudents">-</strong></article>
+            <article class="insight-card"><span>Total Courses</span><strong id="insightCourses">-</strong></article>
+            <article class="insight-card"><span>Total Enrollments</span><strong id="insightTotalEnrollments">-</strong></article>
+            <article class="insight-card"><span>Active Enrollments</span><strong id="insightActiveEnrollments">-</strong></article>
+            <article class="insight-card"><span>Dropped Enrollments</span><strong id="insightDroppedEnrollments">-</strong></article>
+            <article class="insight-card"><span>Fully Booked Courses</span><strong id="insightFullCourses">-</strong></article>
+        </div>
+    </section>
+
+    <section class="panel reveal" style="--reveal-delay: 560ms">
+        <div class="panel-title-wrap">
+            <h2>Activity Stream</h2>
+            <p>Request history and system messages are captured here.</p>
+        </div>
+        <pre id="activityLog" class="log-box">System ready.</pre>
+    </section>
+</main>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
